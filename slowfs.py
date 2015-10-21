@@ -4,22 +4,111 @@
 #
 # Licensed under BSD licnese, see LICENSE.
 
+import atexit
 import errno
 import os
+import socket
 import sys
 import time
+import threading
+import logging
 
 import fuse
 
 
-def main(mountpoint, root):
-    fuse.FUSE(SlowFS(root), mountpoint, nothreads=True, foreground=True)
+def main(args):
+    if len(args) < 2:
+        sys.stderr.write("Usage: python slowfs.py root mountpoint [configfile]\n")
+        sys.exit(2)
+    root = args[0]
+    mountpoint = args[1]
+    if len(args) > 2:
+        configfile = args[2]
+        config = Config(configfile)
+    else:
+        config = None
+    logging.basicConfig(level=logging.INFO,
+                        format='%(asctime)s %(levelname)s %(message)s')
+    Reloader(config)
+    fuse.FUSE(SlowFS(root, config), mountpoint, nothreads=True, foreground=True)
+
+
+class Config(object):
+
+    def __init__(self, path):
+        self._path = path
+        self._namespace = {}
+        self._load()
+
+    def _load(self):
+        d = {}
+        with open(self._path) as f:
+            exec f in d, d
+        self._namespace = d
+
+    def __getattr__(self, name):
+        try:
+            return self._namespace[name]
+        except KeyError:
+            raise AttributeError(name)
+
+
+class Reloader(object):
+
+    SOCK = "control"
+    log = logging.getLogger("slowfs")
+
+    def __init__(self, config):
+        self.config = config
+        self._remove_sock()
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+        self.sock.bind(self.SOCK)
+        atexit.register(self._remove_sock)
+        self.thread = threading.Thread(target=self._run)
+        self.thread.daemon = True
+        self.thread.start()
+
+    def _run(self):
+        try:
+            while True:
+                self._wait_for_reload()
+        except Exception:
+            self.log.exception("Unhnadled error")
+            raise
+
+    def _wait_for_reload(self):
+        try:
+            self.sock.recvfrom(128)
+        except socket.error, e:
+            self.log.error("Error receiving from control socket: %s", e)
+        else:
+            self.log.info("Loading configuration")
+            try:
+                self.config._load()
+            except Exception:
+                self.log.exception("Error reloading configuration")
+
+    def _remove_sock(self):
+        try:
+            os.unlink(self.SOCK)
+        except OSError as e:
+            if e.errno != errno.ENOENT:
+                raise
 
 
 class SlowFS(fuse.Operations):
 
-    def __init__(self, root):
+    def __init__(self, root, config):
         self.root = root
+        self.config = config
+
+    def __call__(self, op, *args):
+        if not hasattr(self, op):
+            raise FuseOSError(EFAULT)
+        seconds = getattr(self.config, op, 0)
+        if seconds:
+            time.sleep(seconds)
+        return getattr(self, op)(*args)
 
     # Filesystem methods
 
@@ -77,7 +166,6 @@ class SlowFS(fuse.Operations):
             'f_frsize', 'f_namemax'))
 
     def unlink(self, path):
-        time.sleep(10)
         return os.unlink(self._full_path(path))
 
     def symlink(self, name, target):
@@ -133,4 +221,4 @@ class SlowFS(fuse.Operations):
 
 
 if __name__ == '__main__':
-    main(sys.argv[2], sys.argv[1])
+    main(sys.argv[1:])

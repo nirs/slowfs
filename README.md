@@ -13,21 +13,31 @@ A very slow file system for simulating overloaded storage
 ## Usage
 
 ```
-# mkdir mountpoint
-# python slowfs.py /realfs /slowfs
+# mkdir /realfs /slowfs
+# python slowfs.py /realfs /slowfs slowfs.cfg
 ```
 
 You will see all files in /realfs under /slowfs. Manipulating the files
-under slowfs will be slow as you configure in slowfs.py.
+under slowfs will be slow as you configure in slowfs.cfg
 
 ## Configuration
 
-Nothing fancy yet; add sleeps in the oprations you want to be slow:
+The config file is a Python module, with key value pairs for all fuse
+operations.
 
+Example: adding delay of 60 seconds when removing a file:
 ```python
-    def unlink(self, path):
-        time.sleep(60)
-        return os.unlink(self._full_path(path))
+unlink = 60
+```
+
+Operations without configuration use no delay. See the included slowfs.cfg for
+more info.
+
+To change configuration when the mount is online, edit the configuration file
+and run the reload.py script:
+
+```
+python reload.py
 ```
 
 ## Exporting via NFS
