@@ -14,7 +14,7 @@ A very slow file system for simulating overloaded storage
 
 ```
 # mkdir /realfs /slowfs
-# python slowfs.py /realfs /slowfs slowfs.cfg
+# python slowfs.py -c slowfs.cfg /realfs /slowfs
 ```
 
 You will see all files in /realfs under /slowfs. Manipulating the files
@@ -27,10 +27,11 @@ operations.
 
 Example: adding delay of 60 seconds when removing a file:
 ```python
+# slowfs.cfg
 unlink = 60
 ```
 
-Operations without configuration use no delay. See the included slowfs.cfg for
+Operations without configuration use no delay. See `slowfs.cfg.example` for
 more info.
 
 To change configuration when the mount is online, edit the configuration file
@@ -39,6 +40,8 @@ and run the reload.py script:
 ```
 python reload.py
 ```
+
+Note: you must run this in the same directory you started slowfs.
 
 ## Exporting via NFS
 
