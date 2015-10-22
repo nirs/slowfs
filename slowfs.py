@@ -25,11 +25,11 @@ def main(args):
     if len(args) > 2:
         configfile = args[2]
         config = Config(configfile)
+        Reloader(config)
     else:
         config = None
     logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s %(levelname)s %(message)s')
-    Reloader(config)
     fuse.FUSE(SlowFS(root, config), mountpoint, nothreads=True, foreground=True)
 
 
