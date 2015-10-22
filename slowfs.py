@@ -56,7 +56,7 @@ class Config(object):
 class Reloader(object):
 
     SOCK = "control"
-    log = logging.getLogger("slowfs")
+    log = logging.getLogger("reloader")
 
     def __init__(self, config):
         self.config = config
