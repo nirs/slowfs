@@ -200,7 +200,7 @@ class SlowFS(fuse.Operations):
         return os.close(fh)
 
     def fsync(self, path, fdatasync, fh):
-        return self.flush(path, fh)
+        return os.fsync(fh)
 
 
 if __name__ == '__main__':
