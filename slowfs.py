@@ -33,12 +33,12 @@ def main(args):
 def parse_args(args):
     parser = argparse.ArgumentParser(description='A slow filesystem.')
     parser.add_argument('-c', '--config',
-                        help='Path to configuration file')
+                        help='path to configuration file')
     parser.add_argument('--debug', action='store_true',
-                        help=('Enable extremely detailed and slow debug mode, '
+                        help=('enable extremely detailed and slow debug mode, '
                               'creating gigabytes of logs'))
-    parser.add_argument('root', help='Path to real file system')
-    parser.add_argument('mountpoint', help='Where to mount slowfs')
+    parser.add_argument('root', help='path to real file system')
+    parser.add_argument('mountpoint', help='where to mount slowfs')
     return parser.parse_args(args)
 
 
