@@ -134,11 +134,8 @@ class SlowFS(fuse.Operations):
         if not os.access(path, mode):
             raise fuse.FuseOSError(errno.EACCES)
 
-    def chmod(self, path, mode):
-        return os.chmod(path, mode)
-
-    def chown(self, path, uid, gid):
-        return os.chown(path, uid, gid)
+    chmod = os.chmod
+    chown = os.chown
 
     def getattr(self, path, fh=None):
         st = os.lstat(path)
@@ -152,17 +149,10 @@ class SlowFS(fuse.Operations):
         for r in dirents:
             yield r
 
-    def readlink(self, path):
-        return os.readlink(path)
-
-    def mknod(self, path, mode, dev):
-        return os.mknod(path, mode, dev)
-
-    def rmdir(self, path):
-        return os.rmdir(path)
-
-    def mkdir(self, path, mode):
-        return os.mkdir(path, mode)
+    readlink = os.readlink
+    mknod = os.mknod
+    rmdir = os.rmdir
+    mkdir = os.mkdir
 
     def statfs(self, path):
         stv = os.statvfs(path)
@@ -170,8 +160,7 @@ class SlowFS(fuse.Operations):
             'f_blocks', 'f_bsize', 'f_favail', 'f_ffree', 'f_files', 'f_flag',
             'f_frsize', 'f_namemax'))
 
-    def unlink(self, path):
-        return os.unlink(path)
+    unlink = os.unlink
 
     def symlink(self, path, target):
         return os.symlink(target, path)
@@ -187,8 +176,7 @@ class SlowFS(fuse.Operations):
 
     # File methods
 
-    def open(self, path, flags):
-        return os.open(path, flags)
+    open = os.open
 
     def create(self, path, mode, fi=None):
         return os.open(path, os.O_WRONLY | os.O_CREAT, mode)
