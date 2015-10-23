@@ -26,7 +26,7 @@ def main(args):
         Reloader(config)
     else:
         config = None
-    ops = SlowFS(args.root, config)
+    ops = SlowFS(args.root, args.mountpoint, config)
     fuse.FUSE(ops, args.mountpoint, nothreads=True, foreground=True)
 
 
@@ -108,14 +108,15 @@ class SlowFS(fuse.Operations):
 
     log = logging.getLogger("fs")
 
-    def __init__(self, root, config):
+    def __init__(self, root, mountpoint, config):
         self.root = root
+        self.mountpoint = mountpoint
         self.config = config
 
     def __call__(self, op, path, *args):
         if not hasattr(self, op):
             raise FuseOSError(EFAULT)
-        self.log.debug('-> %s %s %s', op, path, args)
+        self.log.debug('-> %s %r %r', op, path, args)
         seconds = getattr(self.config, op, 0)
         if seconds:
             time.sleep(seconds)
@@ -124,7 +125,7 @@ class SlowFS(fuse.Operations):
         except Exception as e:
             self.log.debug('<- %s <error %s>', op, e)
             raise
-        self.log.debug('<- %s %s', op, ret)
+        self.log.debug('<- %s %r', op, ret)
         return ret
 
     # Filesystem methods
@@ -158,12 +159,12 @@ class SlowFS(fuse.Operations):
             yield r
 
     def readlink(self, path):
-        pathname = os.readlink(self._full_path(path))
-        if pathname.startswith("/"):
-            # Path name is absolute, sanitize it.
-            return os.path.relpath(pathname, self.root)
+        target = os.readlink(self._full_path(path))
+        if target.startswith(self.root):
+            target = os.path.relpath(target, self.root)
+            return os.path.join(self.mountpoint, target)
         else:
-            return pathname
+            return target
 
     def mknod(self, path, mode, dev):
         return os.mknod(self._full_path(path), mode, dev)
@@ -186,12 +187,15 @@ class SlowFS(fuse.Operations):
         return os.unlink(self._full_path(path))
 
     def symlink(self, name, target):
-        return os.symlink(name, self._full_path(target))
+        if target.startswith(self.mountpoint):
+            target = os.path.relpath(target, self.mountpoint)
+            target = self._full_path(target)
+        return os.symlink(target, self._full_path(name))
 
     def rename(self, old, new):
         return os.rename(self._full_path(old), self._full_path(new))
 
-    def link(self, target, name):
+    def link(self, name, target):
         return os.link(self._full_path(target), self._full_path(name))
 
     def utimens(self, path, times=None):
