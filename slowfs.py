@@ -26,7 +26,7 @@ def main(args):
         Reloader(config)
     else:
         config = None
-    ops = SlowFS(args.root, args.mountpoint, config)
+    ops = SlowFS(args.root, config)
     fuse.FUSE(ops, args.mountpoint, nothreads=True, foreground=True)
 
 
@@ -109,9 +109,8 @@ class SlowFS(fuse.Operations):
 
     log = logging.getLogger("fs")
 
-    def __init__(self, root, mountpoint, config):
-        self.root = root
-        self.mountpoint = mountpoint
+    def __init__(self, root, config):
+        self.root = os.path.realpath(root)
         self.config = config
 
     def __call__(self, op, path, *args):
@@ -122,7 +121,7 @@ class SlowFS(fuse.Operations):
         if seconds:
             time.sleep(seconds)
         try:
-            ret = getattr(self, op)(path, *args)
+            ret = getattr(self, op)(self.root + path, *args)
         except Exception as e:
             self.log.debug('<- %s <error %s>', op, e)
             raise
@@ -132,85 +131,67 @@ class SlowFS(fuse.Operations):
     # Filesystem methods
 
     def access(self, path, mode):
-        full_path = self._full_path(path)
-        if not os.access(full_path, mode):
+        if not os.access(path, mode):
             raise fuse.FuseOSError(errno.EACCES)
 
     def chmod(self, path, mode):
-        full_path = self._full_path(path)
-        return os.chmod(full_path, mode)
+        return os.chmod(path, mode)
 
     def chown(self, path, uid, gid):
-        full_path = self._full_path(path)
-        return os.chown(full_path, uid, gid)
+        return os.chown(path, uid, gid)
 
     def getattr(self, path, fh=None):
-        full_path = self._full_path(path)
-        st = os.lstat(full_path)
+        st = os.lstat(path)
         return dict((key, getattr(st, key)) for key in ('st_atime', 'st_ctime',
                      'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'))
 
     def readdir(self, path, fh):
-        full_path = self._full_path(path)
-
         dirents = ['.', '..']
-        if os.path.isdir(full_path):
-            dirents.extend(os.listdir(full_path))
+        if os.path.isdir(path):
+            dirents.extend(os.listdir(path))
         for r in dirents:
             yield r
 
     def readlink(self, path):
-        target = os.readlink(self._full_path(path))
-        if target.startswith(self.root):
-            target = os.path.relpath(target, self.root)
-            return os.path.join(self.mountpoint, target)
-        else:
-            return target
+        return os.readlink(path)
 
     def mknod(self, path, mode, dev):
-        return os.mknod(self._full_path(path), mode, dev)
+        return os.mknod(path, mode, dev)
 
     def rmdir(self, path):
-        full_path = self._full_path(path)
-        return os.rmdir(full_path)
+        return os.rmdir(path)
 
     def mkdir(self, path, mode):
-        return os.mkdir(self._full_path(path), mode)
+        return os.mkdir(path, mode)
 
     def statfs(self, path):
-        full_path = self._full_path(path)
-        stv = os.statvfs(full_path)
+        stv = os.statvfs(path)
         return dict((key, getattr(stv, key)) for key in ('f_bavail', 'f_bfree',
             'f_blocks', 'f_bsize', 'f_favail', 'f_ffree', 'f_files', 'f_flag',
             'f_frsize', 'f_namemax'))
 
     def unlink(self, path):
-        return os.unlink(self._full_path(path))
+        return os.unlink(path)
 
-    def symlink(self, name, target):
-        if target.startswith(self.mountpoint):
-            target = os.path.relpath(target, self.mountpoint)
-            target = self._full_path(target)
-        return os.symlink(target, self._full_path(name))
+    def symlink(self, path, target):
+        return os.symlink(target, path)
 
-    def rename(self, old, new):
-        return os.rename(self._full_path(old), self._full_path(new))
+    def rename(self, path, new):
+        return os.rename(path, self.root + new)
 
-    def link(self, name, target):
-        return os.link(self._full_path(target), self._full_path(name))
+    def link(self, path, target):
+        return os.link(self.root + target, path)
 
     def utimens(self, path, times=None):
-        return os.utime(self._full_path(path), times)
+        return os.utime(path, times)
 
     # File methods
 
     def open(self, path, flags):
-        full_path = self._full_path(path)
-        return os.open(full_path, flags)
+        return os.open(path, flags)
 
     def create(self, path, mode, fi=None):
-        full_path = self._full_path(path)
-        return os.open(full_path, os.O_WRONLY | os.O_CREAT, mode)
+        return os.open(path, os.O_WRONLY | os.O_CREAT, mode)
 
     def read(self, path, length, offset, fh):
         os.lseek(fh, offset, os.SEEK_SET)
@@ -221,8 +202,7 @@ class SlowFS(fuse.Operations):
         return os.write(fh, buf)
 
     def truncate(self, path, length, fh=None):
-        full_path = self._full_path(path)
-        with open(full_path, 'r+') as f:
+        with open(path, 'r+') as f:
             f.truncate(length)
 
     def flush(self, path, fh):
@@ -233,13 +213,6 @@ class SlowFS(fuse.Operations):
 
     def fsync(self, path, fdatasync, fh):
         return self.flush(path, fh)
-
-    # Helpers
-
-    def _full_path(self, partial):
-        if partial.startswith("/"):
-            partial = partial[1:]
-        return os.path.join(self.root, partial)
 
 
 if __name__ == '__main__':
