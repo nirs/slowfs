@@ -155,16 +155,19 @@ class SlowFS(fuse.Operations):
         if not hasattr(self, op):
             raise FuseOSError(EFAULT)
         self.log.debug('-> %s %r %r', op, path, args)
-        seconds = getattr(self.config, op, 0)
-        if seconds:
-            time.sleep(seconds)
+        self._delay(op)
         try:
             ret = getattr(self, op)(self.root + path, *args)
         except Exception as e:
-            self.log.debug('<- %s <error %s>', op, e)
+            self.log.debug('<- %s %s', op, e)
             raise
         self.log.debug('<- %s %r', op, ret)
         return ret
+
+    def _delay(self, op):
+        seconds = getattr(self.config, op, 0)
+        if seconds:
+            time.sleep(seconds)
 
     # Filesystem methods
 
