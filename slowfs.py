@@ -71,8 +71,8 @@ class Reloader(object):
 
     def __init__(self, config):
         self.config = config
-        self._remove_sock()
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+        self._remove_sock()
         self.sock.bind(self.SOCK)
         atexit.register(self._remove_sock)
         self.thread = threading.Thread(target=self._run)
