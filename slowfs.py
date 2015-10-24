@@ -181,11 +181,7 @@ class SlowFS(fuse.Operations):
                      'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'))
 
     def readdir(self, path, fh):
-        dirents = ['.', '..']
-        if os.path.isdir(path):
-            dirents.extend(os.listdir(path))
-        for r in dirents:
-            yield r
+        return ['.', '..'] + os.listdir(path)
 
     readlink = os.readlink
     mknod = os.mknod
