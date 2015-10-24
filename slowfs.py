@@ -6,6 +6,8 @@
 
 import argparse
 import atexit
+import collections
+import contextlib
 import errno
 import logging
 import os
@@ -27,7 +29,7 @@ def main(args):
     else:
         config = None
     ops = SlowFS(args.root, config)
-    fuse.FUSE(ops, args.mountpoint, nothreads=True, foreground=True)
+    fuse.FUSE(ops, args.mountpoint, foreground=True)
 
 
 def parse_args(args):
@@ -105,6 +107,41 @@ class Reloader(object):
                 raise
 
 
+class CountedLock(object):
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.count = 0
+
+    def __enter__(self):
+        self.lock.acquire()
+        return self
+
+    def __exit__(self, *args):
+        self.lock.release()
+
+
+class LockManager(object):
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._busy = collections.defaultdict(CountedLock)
+
+    @contextlib.contextmanager
+    def __call__(self, fh):
+        with self._lock:
+            lock = self._busy[fh]
+            lock.count += 1
+        try:
+            with lock:
+                yield
+        finally:
+            with self._lock:
+                lock.count -= 1
+                if lock.count == 0:
+                    del self._busy[fh]
+
+
 class SlowFS(fuse.Operations):
 
     log = logging.getLogger("fs")
@@ -112,6 +149,7 @@ class SlowFS(fuse.Operations):
     def __init__(self, root, config):
         self.root = os.path.realpath(root)
         self.config = config
+        self.locked = LockManager()
 
     def __call__(self, op, path, *args):
         if not hasattr(self, op):
@@ -182,12 +220,14 @@ class SlowFS(fuse.Operations):
         return os.open(path, os.O_WRONLY | os.O_CREAT, mode)
 
     def read(self, path, length, offset, fh):
-        os.lseek(fh, offset, os.SEEK_SET)
-        return os.read(fh, length)
+        with self.locked(fh):
+            os.lseek(fh, offset, os.SEEK_SET)
+            return os.read(fh, length)
 
     def write(self, path, buf, offset, fh):
-        os.lseek(fh, offset, os.SEEK_SET)
-        return os.write(fh, buf)
+        with self.locked(fh):
+            os.lseek(fh, offset, os.SEEK_SET)
+            return os.write(fh, buf)
 
     def truncate(self, path, length, fh=None):
         with open(path, 'r+') as f:
