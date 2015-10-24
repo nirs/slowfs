@@ -180,8 +180,7 @@ class SlowFS(fuse.Operations):
 
     def getattr(self, path, fh=None):
         st = os.lstat(path)
-        return dict((key, getattr(st, key)) for key in ('st_atime', 'st_ctime',
-                     'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'))
+        return dict((key, getattr(st, key)) for key in dir(st) if key.startswith('st_'))
 
     def readdir(self, path, fh):
         return ['.', '..'] + os.listdir(path)
