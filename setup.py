@@ -13,6 +13,7 @@ setup(
     license="BSD",
     name="slowfs",
     py_modules = ["slowfs.py"],
+    scripts=["slowfsctl"],
     url="https://github.com/nirs/slowfs",
     version="0.1",
 )

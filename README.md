@@ -35,13 +35,83 @@ Operations without configuration use no delay. See `slowfs.cfg.example` for
 more info.
 
 To change configuration when the mount is online, edit the configuration file
-and run the reload.py script:
+and reload the configuration:
 
 ```
-python reload.py
+./slowfsctl reload
 ```
 
-Note: you must run this in the same directory you started slowfs.
+Note: you must run this in the same directory you started slowfs. slowfsctl
+uses the "control" socket created by slowfs in the worrking directory.
+
+## Controlling slowfs
+
+You can use `slowfsctl` tool to modify slowfs without restarting it.
+
+Available comamnds:
+
+- help
+- status
+- disable
+- enable
+- reload
+- get
+- set
+- log
+
+### help
+```
+slowfsctl help
+```
+Print available commands
+
+### status
+```
+slowfsctl status
+```
+Print current status (Enabled, Disable)
+
+### disable
+```
+slowfsctl disable
+```
+Disable current configuration, deactivating all delays.
+
+### enable
+```
+slowfsctl enable
+```
+Enable current configuration, activating all delays
+
+### reload
+```
+slowfsctl reload
+```
+Reload configuration from cofiguration file specified using the -c, --config
+option. If slowfs is running without configuration file, reset configuration to
+defaults.
+
+### get
+```
+slowfsctl get NAME
+```
+Print current delay for fuse operation NAME.
+
+### set
+```
+slowfsctl set NAME VALUE
+```
+Set dealy for fuse opration NAME to VALUE, overriding value read form
+configuration file.
+
+### log
+```
+slowfsctl log LEVEL
+```
+Change logging level to (debug, info, warning, error)
+
+Note: debug log level is extermely detailed and slow, logging every read or
+written to storage, generating gigabytes of logs.
 
 ## Exporting via NFS
 

@@ -1,0 +1,38 @@
+#!/usr/bin/env python
+import atexit
+import errno
+import os
+import signal
+import socket
+import sys
+
+SOCK = "/tmp/slowfsctl.%d" % os.getpid()
+
+def cleanup():
+    try:
+        os.unlink(SOCK)
+    except OSError as e:
+        if e.errno != errno.ENOENT:
+            raise
+
+sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+sock.bind(SOCK)
+atexit.register(cleanup)
+msg = " ".join(sys.argv[1:])
+
+try:
+    sock.sendto(msg, "control")
+except socket.error as e:
+    if e[0] != errno.ENOENT:
+        raise
+    print "No contol socket - did you start slowfs in this directory?"
+    sys.exit(1)
+
+response, addr = sock.recvfrom(4096)
+
+code, response = response.split(" ", 1)
+if response:
+    print response
+
+code = int(code, 10)
+sys.exit(code)

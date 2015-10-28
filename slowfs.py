@@ -23,11 +23,8 @@ def main(args):
     args = parse_args(args)
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO,
                         format='%(asctime)s %(levelname)s [%(name)s] %(message)s')
-    if args.config:
-        config = Config(args.config)
-        Reloader(config)
-    else:
-        config = None
+    config = Config(args.config)
+    Controller(config)
     ops = SlowFS(args.root, config)
     fuse.FUSE(ops, args.mountpoint, foreground=True)
 
@@ -48,23 +45,34 @@ class Config(object):
 
     def __init__(self, path):
         self._path = path
+        self.enabled = True
         self._namespace = {}
-        self._load()
+        self.reload()
+
+    def reload(self):
+        if self._path is None:
+            self._namespace = {}
+        else:
+            self._namespace = self._load()
+
+    def get(self, name, default=0):
+        return self._namespace.get(name, default)
+
+    def set(self, name, value):
+        self._namespace[name] = value
 
     def _load(self):
         d = {}
         with open(self._path) as f:
             exec f in d, d
-        self._namespace = d
-
-    def __getattr__(self, name):
-        try:
-            return self._namespace[name]
-        except KeyError:
-            raise AttributeError(name)
+        return d
 
 
-class Reloader(object):
+class ClientError(Exception):
+    pass
+
+
+class Controller(object):
 
     SOCK = "control"
     log = logging.getLogger("ctl")
@@ -82,22 +90,106 @@ class Reloader(object):
     def _run(self):
         try:
             while True:
-                self._wait_for_reload()
+                self._handle_command()
         except Exception:
             self.log.exception("Unhnadled error")
             raise
 
-    def _wait_for_reload(self):
+    def _handle_command(self):
         try:
-            self.sock.recvfrom(128)
+            msg, sender = self.sock.recvfrom(1024)
         except socket.error, e:
             self.log.error("Error receiving from control socket: %s", e)
+            return
+        self.log.debug("Received %r from %r", msg, sender)
+        cmd, args = self._parse_msg(msg)
+        try:
+            handle = getattr(self, 'do_' + cmd)
+        except AttributeError:
+            self.log.warning("Unknown command %r", cmd)
+            self.sock.sendto("2 Unknown command %r" % cmd, sender)
+            return
+        try:
+            response = handle(*args)
+        except ClientError as e:
+            self.log.warning("Client error %s", e)
+            self.sock.sendto("2 %s" % e, sender)
+        except Exception:
+            self.log.exception("Error handling %r", cmd)
+            self.sock.sendto("1 Internal error", sender)
         else:
-            self.log.info("Loading configuration")
-            try:
-                self.config._load()
-            except Exception:
-                self.log.exception("Error reloading configuration")
+            self.sock.sendto("0 %s" % response, sender)
+
+    def do_help(self, *args):
+        """ show this help message """
+        commands = sorted((name[3:], getattr(self, name))
+                          for name in dir(self)
+                          if name.startswith("do_"))
+        response = "Available comamnds:\n"
+        for name, func in commands:
+            description = func.__doc__.splitlines()[0].strip()
+            response += "  %-10s  %s\n" % (name, description)
+        return response
+
+    def do_reload(self, *args):
+        """ reload configuration """
+        self.log.info("Reloading configuration")
+        self.config.reload()
+        return ""
+
+    def do_enable(self, *args):
+        """ enable configuration """
+        self.log.info("Enabling configuration")
+        self.config.enabled = True
+        return ""
+
+    def do_disable(self, *args):
+        """ disable configuration """
+        self.log.info("Disabling configuration")
+        self.config.enabled = False
+        return ""
+
+    def do_get(self, *args):
+        """ get config value """
+        if not args:
+            raise ClientError("NAME is required")
+        name = args[0]
+        return "%s" % self.config.get(name)
+
+    def do_set(self, *args):
+        """ set config value """
+        if len(args) < 2:
+            raise ClientError("NAME and VALUE are required")
+        name, value = args[:2]
+        try:
+            value = float(value)
+        except ValueError as e:
+            raise ClientError("Invalid config value: %s" % e)
+        self.config.set(name, value)
+        return ""
+
+    def do_status(self, *args):
+        """ show current status """
+        return "Enabled" if self.config.enabled else "Disabled"
+
+    def do_log(self, *args):
+        """ change log level """
+        if not args:
+            raise ClientError("Log level is required")
+        name = args[0]
+        try:
+            level = getattr(logging, name.upper())
+        except AttributeError:
+            raise ClientError("No such log level %r" % name)
+        self.log.info("Setting log level to %r", name)
+        logging.getLogger().setLevel(level)
+        return ""
+
+    def _parse_msg(self, msg):
+        args = msg.split()
+        if not args:
+            return "help", []
+        return args[0], args[1:]
 
     def _remove_sock(self):
         try:
@@ -165,9 +257,10 @@ class SlowFS(fuse.Operations):
         return ret
 
     def _delay(self, op):
-        seconds = getattr(self.config, op, 0)
-        if seconds:
-            time.sleep(seconds)
+        if self.config.enabled:
+            seconds = self.config.get(op, 0)
+            if seconds:
+                time.sleep(seconds)
 
     # Filesystem methods
 
