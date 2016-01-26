@@ -17,7 +17,7 @@ try:
 except socket.error as e:
     if e[0] != errno.ENOENT:
         raise
-    print "No contol socket - did you start slowfs in this directory?"
+    print "No control socket - did you start slowfs in this directory?"
     sys.exit(1)
 
 response, addr = sock.recvfrom(4096)
