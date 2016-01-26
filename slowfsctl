@@ -1,23 +1,15 @@
 #!/usr/bin/env python
-import atexit
 import errno
 import os
 import signal
 import socket
 import sys
 
-SOCK = "/tmp/slowfsctl.%d" % os.getpid()
-
-def cleanup():
-    try:
-        os.unlink(SOCK)
-    except OSError as e:
-        if e.errno != errno.ENOENT:
-            raise
-
 sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-sock.bind(SOCK)
-atexit.register(cleanup)
+# Use an available address from the abstract namespace
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_PASSCRED, 1)
+sock.bind("")
+
 msg = " ".join(sys.argv[1:])
 
 try:
