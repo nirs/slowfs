@@ -146,3 +146,9 @@ sys     0m0.001s
 ```
 
 Note: unlink() was configured with 60 seconds sleep.
+
+
+## Talks
+
+- [slowfs - slowing down storage for fun and profit](https://nirs.github.io/slowfs-qecamp)
+at QeCamp TLV 2017
