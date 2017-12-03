@@ -2,7 +2,7 @@
 # Copyright (c) 2013, Stavros Korokithakis
 # All rights reserved.
 #
-# Licensed under BSD licnese, see LICENSE.
+# Licensed under BSD license, see LICENSE.
 
 import argparse
 import atexit
@@ -92,7 +92,7 @@ class Controller(object):
             while True:
                 self._handle_command()
         except Exception:
-            self.log.exception("Unhnadled error")
+            self.log.exception("Unhandled error")
             raise
 
     def _handle_command(self):
@@ -125,7 +125,7 @@ class Controller(object):
         commands = sorted((name[3:], getattr(self, name))
                           for name in dir(self)
                           if name.startswith("do_"))
-        response = "Available comamnds:\n"
+        response = "Available commands:\n"
         for name, func in commands:
             description = func.__doc__.splitlines()[0].strip()
             response += "  %-10s  %s\n" % (name, description)
