@@ -9,6 +9,7 @@ import atexit
 import collections
 import contextlib
 import errno
+import io
 import logging
 import os
 import socket
@@ -17,6 +18,7 @@ import threading
 import time
 
 import fuse
+import six
 
 
 def main(args):
@@ -63,8 +65,8 @@ class Config(object):
 
     def _load(self):
         d = {}
-        with open(self._path) as f:
-            exec f in d, d
+        with io.open(self._path, "rb") as f:
+            six.exec_(f.read(), d)
         return d
 
 
@@ -98,7 +100,7 @@ class Controller(object):
     def _handle_command(self):
         try:
             msg, sender = self.sock.recvfrom(1024)
-        except socket.error, e:
+        except socket.error as e:
             self.log.error("Error receiving from control socket: %s", e)
             return
         self.log.debug("Received %r from %r", msg, sender)
