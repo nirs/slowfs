@@ -152,3 +152,39 @@ Note: unlink() was configured with 60 seconds sleep.
 
 - [slowfs - slowing down storage for fun and profit](https://nirs.github.io/slowfs-qecamp)
 at QeCamp TLV 2017
+
+
+## Contributing
+
+To run the tests locally, please install tox:
+
+```
+pip install tox
+```
+
+To run the tests locally:
+```
+$ tox
+```
+
+You can also run specific env:
+```
+$ tox -e py27
+```
+
+To stop on the first failure:
+```
+$ tox -- -x
+```
+
+To see test logs in tests output:
+```
+$ tox -- -s
+```
+
+To see slowfs debug logs in tests output, set the DEBUG environment
+variable:
+```
+$ DEBUG=1 tox -- -s
+```
+Note that this creates extremly verbose logs.
