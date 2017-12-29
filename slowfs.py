@@ -295,7 +295,8 @@ class SlowFS(fuse.Operations):
 
     def getattr(self, path, fh=None):
         st = os.lstat(path)
-        return dict((key, getattr(st, key)) for key in dir(st) if key.startswith('st_'))
+        return {key: getattr(st, key)
+                for key in dir(st) if key.startswith('st_')}
 
     def readdir(self, path, fh):
         return ['.', '..'] + os.listdir(path)
@@ -307,7 +308,8 @@ class SlowFS(fuse.Operations):
 
     def statfs(self, path):
         stv = os.statvfs(path)
-        return dict((key, getattr(stv, key)) for key in dir(stv) if key.startswith('f_'))
+        return {key: getattr(stv, key)
+                for key in dir(stv) if key.startswith('f_')}
 
     unlink = os.unlink
 
