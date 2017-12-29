@@ -267,7 +267,7 @@ class SlowFS(fuse.Operations):
 
     def __call__(self, op, path, *args):
         if not hasattr(self, op):
-            raise FuseOSError(EFAULT)
+            raise fuse.FuseOSError(errno.EFAULT)
         self.log.debug('-> %s %r %r', op, path, args)
         self._delay(op)
         try:
