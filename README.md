@@ -1,6 +1,8 @@
 # slowfs
 A very slow file system for simulating overloaded storage
 
+[![Build Status](https://travis-ci.org/nirs/slowfs.svg?branch=master)](https://travis-ci.org/nirs/slowfs)
+
 ## Installation
 
 ```

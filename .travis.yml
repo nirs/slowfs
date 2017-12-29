@@ -1,0 +1,36 @@
+# Travis CI configuration.
+
+language: python
+
+matrix:
+  include:
+  - python: "2.7"
+    env: ENV=flake8
+  - python: "2.7"
+    env: ENV=py27
+  - python: "3.5"
+    env: ENV=py35
+  - python: "3.6"
+    env: ENV=py36
+  - python: "3.7-dev"
+    env: ENV=py37
+  - python: "pypy"
+    env: ENV=pypy
+  - python: "pypy3"
+    env: ENV=pypy3
+
+before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y fuse
+
+install:
+    pip install tox
+
+env:
+  # We skip missing interpeters by default so developers do no thave to keep
+  # all python versions installed. On travis we know that the require python is
+  # installed, so should fail if we cannot find the expected python executable.
+  - SKIP_MISSING_INTERPRETERS=False
+
+script:
+  - tox -e $ENV
