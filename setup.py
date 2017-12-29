@@ -12,7 +12,7 @@ setup(
     description=("A very slow file sysem for simulating overloded storage"),
     license="BSD",
     name="slowfs",
-    py_modules = ["slowfs.py"],
+    py_modules=["slowfs.py"],
     scripts=["slowfsctl"],
     url="https://github.com/nirs/slowfs",
     version="0.1",
