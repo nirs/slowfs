@@ -77,6 +77,12 @@ class ClientError(Exception):
 class Controller(object):
 
     SOCK = "control"
+
+    # Response codes
+    OK = 0
+    INTERNAL_ERROR = 1
+    USER_ERROR = 2
+
     log = logging.getLogger("ctl")
 
     def __init__(self, config):
@@ -104,23 +110,31 @@ class Controller(object):
             self.log.error("Error receiving from control socket: %s", e)
             return
         self.log.debug("Received %r from %r", msg, sender)
+        try:
+            msg = msg.decode("ascii")
+        except UnicodeDecodeError:
+            self.log.warning("Invalid message %r", msg)
+            self._send_msg(
+                self.USER_ERROR, "Invalid message %r" % msg, sender)
+            return
         cmd, args = self._parse_msg(msg)
         try:
             handle = getattr(self, 'do_' + cmd)
         except AttributeError:
             self.log.warning("Unknown command %r", cmd)
-            self.sock.sendto("2 Unknown command %r" % cmd, sender)
+            self._send_msg(
+                self.USER_ERROR, "Unknown command %r" % cmd, sender)
             return
         try:
             response = handle(*args)
         except ClientError as e:
             self.log.warning("Client error %s", e)
-            self.sock.sendto("2 %s" % e, sender)
+            self._send_msg(self.USER_ERROR, "Client error %s" % e, sender)
         except Exception:
             self.log.exception("Error handling %r", cmd)
-            self.sock.sendto("1 Internal error", sender)
+            self._send_msg(self.INTERNAL_ERROR, "Internal error", sender)
         else:
-            self.sock.sendto("0 %s" % response, sender)
+            self._send_msg(self.OK, response, sender)
 
     def do_help(self, *args):
         """ show this help message """
@@ -192,6 +206,11 @@ class Controller(object):
         if not args:
             return "help", []
         return args[0], args[1:]
+
+    def _send_msg(self, code, message, sender):
+        payload = "%d %s" % (code, message)
+        payload = payload.encode("ascii")
+        self.sock.sendto(payload, sender)
 
     def _remove_sock(self):
         try:

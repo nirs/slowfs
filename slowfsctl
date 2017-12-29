@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from __future__ import print_function
+
 import errno
 import os
 import signal
@@ -13,18 +15,18 @@ sock.bind("")
 msg = " ".join(sys.argv[1:])
 
 try:
-    sock.sendto(msg, "control")
+    sock.sendto(msg.encode("ascii"), "control")
 except socket.error as e:
     if e[0] != errno.ENOENT:
         raise
-    print "No control socket - did you start slowfs in this directory?"
+    print("No control socket - did you start slowfs in this directory?")
     sys.exit(1)
 
-response, addr = sock.recvfrom(4096)
-
-code, response = response.split(" ", 1)
+payload, addr = sock.recvfrom(4096)
+payload = payload.decode("ascii")
+code, response = payload.split(" ", 1)
 if response:
-    print response
+    print(response)
 
 code = int(code, 10)
 sys.exit(code)
