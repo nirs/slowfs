@@ -23,8 +23,9 @@ import six
 
 def main(args):
     args = parse_args(args)
-    logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO,
-                        format='%(asctime)s %(levelname)s [%(name)s] %(message)s')
+    logging.basicConfig(
+        level=logging.DEBUG if args.debug else logging.INFO,
+        format='%(asctime)s %(levelname)s [%(name)s] %(message)s')
     config = Config(args.config)
     Controller(config)
     ops = SlowFS(args.root, config)
