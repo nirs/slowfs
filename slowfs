@@ -30,7 +30,8 @@ def main(args):
     config = Config(args.config)
     Controller(config)
     ops = SlowFS(args.root, config)
-    fuse.FUSE(ops, args.mountpoint, foreground=True)
+    fuse.FUSE(ops, args.mountpoint, foreground=True,
+              allow_other=args.allow_other)
 
 
 def parse_args(args):
@@ -40,6 +41,11 @@ def parse_args(args):
     parser.add_argument('--debug', action='store_true',
                         help=('enable extremely detailed and slow debug mode, '
                               'creating gigabytes of logs'))
+    parser.add_argument('--allow-other', action='store_true',
+                        help=('overrides the security measure restricting '
+                              'file access to the filesystem owner, so that '
+                              'all users (including root) can access the '
+                              'files.'))
     parser.add_argument('root', help='path to real file system')
     parser.add_argument('mountpoint', help='where to mount slowfs')
     return parser.parse_args(args)
