@@ -25,7 +25,7 @@ def basedir(tmpdir):
 
     # 3. Start slowfs
     log.debug("Starting slowfs...")
-    cmd = ["./slowfs", str(realfs), str(slowfs)]
+    cmd = ["python", "slowfs", str(realfs), str(slowfs)]
     if os.environ.get("DEBUG"):
         cmd.append("--debug")
     p = subprocess.Popen(cmd)
