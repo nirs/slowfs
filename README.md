@@ -10,13 +10,14 @@ A very slow file system for simulating overloaded storage
 # git clone https://github.com/nirs/slowfs.git
 # cd slowfs
 # pip install -r requirements.txt
+# python setup.py install
 ```
 
 ## Usage
 
 ```
 # mkdir /realfs /slowfs
-# python slowfs.py -c slowfs.cfg /realfs /slowfs
+# slowfs -c slowfs.cfg /realfs /slowfs
 ```
 
 You will see all files in /realfs under /slowfs. Manipulating the files
@@ -40,7 +41,7 @@ To change configuration when the mount is online, edit the configuration file
 and reload the configuration:
 
 ```
-./slowfsctl reload
+slowfsctl reload
 ```
 
 Note: you must run this in the same directory you started slowfs. slowfsctl
@@ -189,4 +190,4 @@ variable:
 ```
 $ DEBUG=1 tox -- -s
 ```
-Note that this creates extremly verbose logs.
+Note that this creates extremely verbose logs.
