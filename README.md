@@ -5,8 +5,19 @@ A very slow file system for simulating overloaded storage
 
 ## Installation
 
+### Installing prerequisites on Fedora/RHEL/CentOS
 ```
-# dnf install fuse fuse-devel
+# dnf install -y git python python-pip fuse fuse-devel
+```
+
+### Installing prerequisites on Debian/Ubuntu
+```
+# apt-get install -y git python python-pip fuse
+```
+
+### Further steps
+
+```
 # git clone https://github.com/nirs/slowfs.git
 # cd slowfs
 # pip install -r requirements.txt
